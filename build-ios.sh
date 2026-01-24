@@ -55,6 +55,9 @@ xcodebuild -create-xcframework "${XCF_ARGS[@]}" -output "${XCFRAMEWORK_DIR}"
 
 ditto -c -k --sequesterRsrc --keepParent "${XCFRAMEWORK_DIR}" "${XCFRAMEWORK_ZIP}"
 checksum=$(swift package compute-checksum "${XCFRAMEWORK_ZIP}")
-version=$(cargo metadata --format-version 1 | jq -r --arg pkg_name "queue-file-swift" '.packages[] | select(.name==$pkg_name) .version')
+metadata=$(cargo metadata --format-version 1 --no-deps)
+pkg_id=$(jq -r '.workspace_members[0]' <<<"$metadata")
+pkg_name=$(jq -r --arg pkg_id "$pkg_id" '.packages[] | select(.id==$pkg_id) .name' <<<"$metadata")
+version=$(jq -r --arg pkg_id "$pkg_id" '.packages[] | select(.id==$pkg_id) .version' <<<"$metadata")
 sed -i "" -E "s/(let releaseTag = \")[^\"]*(\")/\1$version\2/g" ./Package.swift
 sed -i "" -E "s/(let releaseChecksum = \")[^\"]*(\")/\1$checksum\2/g" ./Package.swift
